@@ -16,6 +16,7 @@ tf.app.flags.DEFINE_string('labels_file', '../labels', 'Labels file')
 
 tf.app.flags.DEFINE_integer('batch', 12, 'Batch size')
 tf.app.flags.DEFINE_integer('steps', 40000, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('labels_count', 2, 'Labels count')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -28,10 +29,19 @@ def deconv(x, channels_shape, name):
 def pool(x):
   return cnn.max_pool(x, 2, 2)
 
+def fc(x, kernel_shape, bias_shape):
+    weights = tf.get_variable("weights", kernel_shape, initializer=tf.truncated_normal_initializer(stddev=.1))
+    biases = tf.get_variable("biases", bias_shape, initializer=tf.constant_initializer(.1))
+    return tf.matmul(x, weights)
+
+def flatten_layer(layer):
+    layer_shape = layer.get_shape() #.as_list()
+    num_features = layer_shape[1:4].num_elements()    
+    layer_flat = tf.reshape(layer, [-1, num_features])
+    return layer_flat, num_features
 
 class SegNetAutoencoder:
   def __init__(self):
-    self.indices = [None for i in range(5)]
     self.params = []
 
   def encode(self, images):
@@ -40,42 +50,42 @@ class SegNetAutoencoder:
     with tf.variable_scope('pool1'):
       conv1 = conv(images, [3, 64], 'conv1_1')
       conv2 = conv(conv1, [64, 64], 'conv1_2')
-      pool1, self.indices[0] = pool(conv2)
+      pool1 = pool(conv2)
 
     with tf.variable_scope('pool2'):
       conv3 = conv(pool1, [64, 128], 'conv2_1')
       conv4 = conv(conv3, [128, 128], 'conv2_2')
-      pool2, self.indices[1] = pool(conv4)
+      pool2 = pool(conv4)
 
     with tf.variable_scope('pool3'):
       conv5 = conv(pool2, [128, 256], 'conv3_1')
       conv6 = conv(conv5, [256, 256], 'conv3_2')
       conv7 = conv(conv6, [256, 256], 'conv3_3')
-      pool3, self.indices[2] = pool(conv7)
+      pool3 = pool(conv7)
 
     with tf.variable_scope('pool4'):
       conv8 = conv(pool3, [256, 512], 'conv4_1')
       conv9 = conv(conv8, [512, 512], 'conv4_2')
       conv10 = conv(conv9, [512, 512], 'conv4_3')
-      pool4, self.indices[3] = pool(conv10)
+      pool4= pool(conv10)
 
     with tf.variable_scope('pool5'):
       conv11 = conv(pool4, [512, 512], 'conv5_1')
       conv12 = conv(conv11, [512, 512], 'conv5_2')
       conv13 = conv(conv12, [512, 512], 'conv5_3')
-      pool5, self.indices[4] = pool(conv13)
+      pool5 = pool(conv13)
 
     return pool5
 
   def decode(self, code):
     with tf.variable_scope('unpool1'):
-      unpool1 = upsample(code, self.indices[4])
+      unpool1 = upsample(code)
       deconv1 = deconv(unpool1, [512, 512], 'deconv5_3')
       deconv2 = deconv(deconv1, [512, 512], 'deconv5_2')
       deconv3 = deconv(deconv2, [512, 512], 'deconv5_1')
 
     with tf.variable_scope('unpool2'):
-      unpool2 = upsample(deconv3, self.indices[3])
+      unpool2 = upsample(deconv3)
       deconv4 = deconv(unpool2, [512, 512], 'deconv4_3')
       deconv5 = deconv(deconv4, [512, 512], 'deconv4_2')
       deconv6 = deconv(deconv5, [256, 512], 'deconv4_1')
@@ -96,10 +106,11 @@ class SegNetAutoencoder:
       deconv12 = deconv(unpool5, [64, 64], 'deconv1_2')
       deconv13 = deconv(deconv12, [32, 64], 'deconv1_1')
 
-    rgb_output = classifier.rgb(deconv13)
-    tf.image_summary('output', rgb_output)
+    with tf.variable_scope('fc', reuse=True):
+      deconv13_flat, deconv_13_features = flatten_layer(deconv13)
+      logits = fc(deconv13_flat, [deconv13_features, FLAGS.labels_count], [FLAGS.labels_count])
 
-    return deconv13
+    return logits
 
   def prepare_encoder_parameters(self):
     param_format = 'conv%d_%d_%s'
@@ -124,11 +135,9 @@ def inference(autoencoder, images):
 def train():
   autoencoder = SegNetAutoencoder()
   images, labels = inputs(FLAGS.train, FLAGS.train_labels, FLAGS.batch)
-  one_hot_labels = classifier.one_hot(labels)
-
   logits = inference(autoencoder, images)
 
-  cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_labels, name='xentropy')
+  cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, labels, name='xentropy') 
   loss = tf.reduce_mean(cross_entropy, name='loss')
   tf.scalar_summary(loss.op.name, loss)
 

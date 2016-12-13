@@ -26,4 +26,4 @@ def deconv(x, receptive_field_shape, channels_shape, stride, name):
   return tf.nn.relu(tf.contrib.layers.batch_norm(conv_bias))
 
 def max_pool(x, size, stride, padding='SAME'):
-  return tf.nn.max_pool_with_argmax(x, ksize=[1, size, size, 1], strides=[1, stride, stride, 1], padding=padding, name='maxpool')
+  return tf.nn.max_pool(x, ksize=[1, size, size, 1], strides=[1, stride, stride, 1], padding=padding, name='maxpool')
