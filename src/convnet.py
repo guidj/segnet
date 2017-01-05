@@ -6,6 +6,8 @@ def conv(x, receptive_field_shape, channels_shape, stride, name):
 
   weights = tf.get_variable('%s_W' % name, kernel_shape, initializer=tf.truncated_normal_initializer(stddev=.1))
   biases = tf.get_variable('%s_b' % name, bias_shape, initializer=tf.constant_initializer(.1))
+  
+  print '[conv][conv2d][x/input: %s, weights/filter: %s, stride: %d, name: %s]' % (x.get_shape().as_list(), weights.get_shape().as_list(), stride, name)
   conv = tf.nn.conv2d(x, weights, strides=[1, stride, stride, 1], padding='SAME')
   conv_bias = tf.nn.bias_add(conv, biases)
   return tf.nn.relu(tf.contrib.layers.batch_norm(conv_bias))
@@ -23,6 +25,8 @@ def deconv(x, receptive_field_shape, channels_shape, stride, name):
   biases = tf.get_variable('%s_b' % name, bias_shape, initializer=tf.constant_initializer(.1))
   conv = tf.nn.conv2d_transpose(x, weights, [batch_size, height, width, channels_shape[0]], [1, stride, stride, 1], padding='SAME')
   conv_bias = tf.nn.bias_add(conv, biases)
+  print '[deconv][conv2d][x/input: %s, weights/filter: %s, stride: %d, name: %s]' % (x.get_shape().as_list(), weights.get_shape().as_list(), stride, name)
+
   return tf.nn.relu(tf.contrib.layers.batch_norm(conv_bias))
 
 def max_pool(x, size, stride, padding='SAME'):

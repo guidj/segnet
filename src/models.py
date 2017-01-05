@@ -14,8 +14,8 @@ class SegNetAutoencoder:
   def deconv(self, x, channels_shape, name):
     return cnn.deconv(x, [3, 3], channels_shape, 1, name)
 
-  def pool(self, x):
-    return cnn.max_pool(x, 2, 2)
+  def pool(self, x, size=2, stride=2):
+    return cnn.max_pool(x, size, stride)
 
   def unpool(self, bottom):
     sh = bottom.get_shape().as_list()
@@ -24,6 +24,8 @@ class SegNetAutoencoder:
     for i in range(dim, 0, -1):
       out = tf.concat(i, [out, tf.zeros_like(out)])
     out_size = [-1] + [s * 2 for s in sh[1:-1]] + [sh[-1]]
+  
+    print '[models][unpool][in/shape: %s, dim: %d, out: %s, outsize: %s]' % (sh, dim, out.get_shape().as_list(), out_size)
     return tf.reshape(out, out_size)
   
   def encode(self, images):
@@ -32,12 +34,12 @@ class SegNetAutoencoder:
     with tf.variable_scope('pool1'):
       conv1 = self.conv(images, [3, 64], 'conv1_1')
       conv2 = self.conv(conv1, [64, 64], 'conv1_2')
-      pool1 = self.pool(conv2)
+      pool1 = self.pool(conv2, 2, 1) # from (1, 1) to (2, 1)
 
     with tf.variable_scope('pool2'):
       conv3 = self.conv(pool1, [64, 128], 'conv2_1')
       conv4 = self.conv(conv3, [128, 128], 'conv2_2')
-      pool2 = self.pool(conv4)
+      pool2 = self.pool(conv4, 2, 1)
 
     with tf.variable_scope('pool3'):
       conv5 = self.conv(pool2, [128, 256], 'conv3_1')
@@ -79,12 +81,14 @@ class SegNetAutoencoder:
       deconv9 = self.deconv(deconv8, [128, 256], 'deconv3_1')
 
     with tf.variable_scope('unpool4'):
-      unpool4 = self.unpool(deconv9)
+      #unpool4 = self.unpool(deconv9)
+      unpool4 = deconv9
       deconv10 = self.deconv(unpool4, [128, 128], 'deconv2_2')
       deconv11 = self.deconv(deconv10, [64, 128], 'deconv2_1')
 
     with tf.variable_scope('unpool5'):
-      unpool5 = self.unpool(deconv11)
+      #unpool5 = self.unpool(deconv11)
+      unpool5 = deconv11
       deconv12 = self.deconv(unpool5, [64, 64], 'deconv1_2')
       deconv13 = self.deconv(deconv12, [self.n, 64], 'deconv1_1')
 

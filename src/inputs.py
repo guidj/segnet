@@ -15,18 +15,21 @@ def read_and_decode_single_example(filename):
   image = features['image/encoded']
   image = tf.cast(tf.image.decode_png(image, 3), tf.float32)
   image /= 255
-  image.set_shape([224, 224, 3])
+  #image.set_shape([224, 224, 3])
+  image.set_shape([360, 480, 3])
   return image
 
+
 def inputs(batch_size, train_filename, train_labels_filename=None):
+  _min_after_dequeue = 16
+  _capacity = _min_after_dequeue + 3 * batch_size
   image = read_and_decode_single_example(train_filename)
+  _inp = [image] 
+
   if train_labels_filename:
     label = read_and_decode_single_example(train_labels_filename)
-    images_batch, labels_batch = tf.train.shuffle_batch(
-      [image, label],
-      batch_size=batch_size,
-      capacity=2000,
-      min_after_dequeue=1000)
-    return images_batch, labels_batch
-  else:
-    return tf.train.shuffle_batch([image], batch_size=batch_size, capacity=2000, min_after_dequeue=1000)
+    _inp.append(label)
+
+  rs = tf.train.shuffle_batch(_inp, batch_size=batch_size, capacity=_capacity, min_after_dequeue=_min_after_dequeue)
+
+  return rs

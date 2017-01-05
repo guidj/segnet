@@ -27,7 +27,7 @@ def test():
   images = inputs(FLAGS.batch, FLAGS.test)
   #one_hot_labels = classifier.one_hot(labels)
 
-  autoencoder = SegNetAutoencoder(2, max_images=20)
+  autoencoder = SegNetAutoencoder(13, max_images=20)
   logits = autoencoder.inference(images)
 
   #accuracy_op = accuracy(logits, one_hot_labels)

@@ -28,6 +28,7 @@ def _bytes_feature(value):
 
 
 def _convert_to_example(filename, image_buffer, height, width):
+  # print '[_covert_to_example][h: %d, w: %d]' % (height, width)
   example = tf.train.Example(features=tf.train.Features(feature={
     'image/encoded': _bytes_feature(image_buffer)
   }))
@@ -45,6 +46,7 @@ class ImageCoder(object):
     image = self._sess.run(self._decode_png, feed_dict={self._png_data: image_data})
     assert len(image.shape) == 3
     assert image.shape[2] == 3
+    # print '[decode_png][h: %d, w: %d, c: %d]' % (image.shape[0], image.shape[1], image.shape[2])
     return image
 
 
@@ -65,7 +67,9 @@ def _process_image_files_batch(coder, thread_index, ranges, name, filenames, num
   # Each thread produces N shards where N = int(num_shards / num_threads).
   # For instance, if num_shards = 128, and the num_threads = 2, then the first
   # thread would produce shards [0, 64).
+  
   num_threads = len(ranges)
+  print '[_p_image_files_batch][threads: %d, shards: %d]' % (num_threads, num_shards)
   assert not num_shards % num_threads
   num_shards_per_batch = int(num_shards / num_threads)
 

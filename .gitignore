@@ -5,3 +5,6 @@ logs/
 
 *.pyc
 vgg16_weights.npz
+
+*.swp
+log.txt
