@@ -157,7 +157,7 @@ class SegNetAutoencoder(object):
         with tf.variable_scope('pool1'):
             conv1 = self.conv(images, [3, 64], 'conv1_1')
             conv2 = self.conv(conv1, [64, 64], 'conv1_2')
-            pool1, _ = self.pool(conv2, 2, 1)  # from (1, 1) to (2, 1)
+            pool1, _ = self.pool(conv2, 2, 1)
 
         with tf.variable_scope('pool2'):
             conv3 = self.conv(pool1, [64, 128], 'conv2_1')
@@ -245,6 +245,7 @@ class SegNetBasic(object):
         self.params = []
         self.n = n
         self.max_images = max_images
+        self.max_pool_indeces = []
 
     def conv(self, x, channels_shape, name, kernel_size=None, stride=1):
         if kernel_size is None:
@@ -263,7 +264,10 @@ class SegNetBasic(object):
     def pad(self, t, paddings):
         return tf.pad(t, paddings=paddings, mode='CONSTANT')
 
-    def unpool(self, bottom):
+    def unpool(self, bottom, argmax=None):
+        if argmax is not None:
+            return cnn.unpool_layer2x2_batch(bottom, argmax)
+
         sh = bottom.get_shape().as_list()
         dim = len(sh[1:-1])
         out = tf.reshape(bottom, [-1] + sh[-dim:])
@@ -290,38 +294,42 @@ class SegNetBasic(object):
         with tf.variable_scope('pool1'):
             conv1 = self.conv(self.pad(images, paddings), [3, 64], 'conv1_1')
             pool1, argmax1 = self.pool(conv1)
+            self.max_pool_indeces.append(argmax1)
 
         with tf.variable_scope('pool2'):
             conv2 = self.conv(self.pad(pool1, paddings), [64, 64], 'conv2_1')
             pool2, argmax2 = self.pool(conv2)
+            self.max_pool_indeces.append(argmax2)
 
         with tf.variable_scope('pool3'):
             conv3 = self.conv(self.pad(pool2, paddings), [64, 64], 'conv3_1')
             pool3, argmax3 = self.pool(conv3)
+            self.max_pool_indeces.append(argmax3)
 
         with tf.variable_scope('pool4'):
             conv4 = self.conv(self.pad(pool3, paddings), [64, 64], 'conv4_1')
             pool4, argmax4 = self.pool(conv4)
+            self.max_pool_indeces.append(argmax4)
 
         return pool4
 
     def decode(self, code):
         paddings = [[0, 0], [0, 0], [0, 0], [0, 0]]
         with tf.variable_scope('unpool4'):
-            unpool4 = self.unpool(code)
+            unpool4 = self.unpool(code, self.max_pool_indeces[-1])
             unpool4 = self.remove_bottom_row(unpool4)
             deconv4 = self.deconv(self.pad(unpool4, paddings), [64, 64], 'deconv4_1')
 
         with tf.variable_scope('unpool3'):
-            unpool3 = self.unpool(deconv4)
+            unpool3 = self.unpool(deconv4, self.max_pool_indeces[-2])
             deconv3 = self.deconv(self.pad(unpool3, paddings), [64, 64], 'deconv3_1')
 
         with tf.variable_scope('unpool2'):
-            unpool2 = self.unpool(deconv3)
+            unpool2 = self.unpool(deconv3, self.max_pool_indeces[-3])
             deconv2 = self.deconv(self.pad(unpool2, paddings), [64, 64], 'deconv2_1')
 
         with tf.variable_scope('unpool1'):
-            unpool1 = self.unpool(deconv2)
+            unpool1 = self.unpool(deconv2, self.max_pool_indeces[-4])
             deconv1 = self.deconv(self.pad(unpool1, paddings), [64, 64], 'deconv1_1')
 
         rgb_output = classifier.rgb(deconv1)

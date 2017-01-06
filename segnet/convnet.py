@@ -77,17 +77,17 @@ def unpool_layer2x2_batch(bottom, argmax):
     width = top_shape[2]
     channels = top_shape[3]
 
-    argmax_shape = tf.to_int32([batch_size, height, width, channels])
+    argmax_shape = tf.to_int64([batch_size, height, width, channels])
     argmax = unravel_argmax(argmax, argmax_shape)
 
-    t1 = tf.to_int32(tf.range(channels))
+    t1 = tf.to_int64(tf.range(channels))
     t1 = tf.tile(t1, [batch_size * (width // 2) * (height // 2)])
     t1 = tf.reshape(t1, [-1, channels])
     t1 = tf.transpose(t1, perm=[1, 0])
     t1 = tf.reshape(t1, [channels, batch_size, height // 2, width // 2, 1])
     t1 = tf.transpose(t1, perm=[1, 0, 2, 3, 4])
 
-    t2 = tf.to_int32(tf.range(batch_size))
+    t2 = tf.to_int64(tf.range(batch_size))
     t2 = tf.tile(t2, [channels * (width // 2) * (height // 2)])
     t2 = tf.reshape(t2, [-1, batch_size])
     t2 = tf.transpose(t2, perm=[1, 0])
@@ -101,5 +101,5 @@ def unpool_layer2x2_batch(bottom, argmax):
     x1 = tf.transpose(bottom, perm=[0, 3, 1, 2])
     values = tf.reshape(x1, [-1])
 
-    delta = tf.SparseTensor(indices, values, tf.to_int32(top_shape))
+    delta = tf.SparseTensor(indices, values, tf.to_int64(top_shape))
     return tf.sparse_tensor_to_dense(tf.sparse_reorder(delta))
