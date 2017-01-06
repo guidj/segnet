@@ -1,9 +1,9 @@
+#!/usr/bin/env bash
 wget https://www.cs.toronto.edu/~frossard/vgg16/vgg16_weights.npz
 mkdir -p input
 mv vgg16_weights.npz input/
 
-pip install tqdm
-
+#pip install tqdm
 
 mkdir -p ckpts
 mkdir -p logs

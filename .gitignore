@@ -8,3 +8,4 @@ vgg16_weights.npz
 
 *.swp
 log.txt
+.idea

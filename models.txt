@@ -1,0 +1,69 @@
+basic
+
+conv1
+    output 64, kernel 7, pad 3, bias filler constant
+    batch norm
+    relu
+
+pool1
+    kernel 2, stride 2
+
+
+conv2
+    output 64, kernel 7, pad 3
+    batch norm
+    relu
+
+pool2
+    kernel 2, stride 2
+
+conv3
+    output 64, kernel 7, pad 3
+    batch norm
+    relu
+
+pool3
+    kernel 2, stride 2
+
+conv4
+    output 64, kernel 7, pad 3
+    batch norm
+    relu
+
+pool4
+    kernel 2, stride 2
+
+
+deconv4
+    output 64, kernel 7, pad 3
+
+upsample4
+    scale 2, pad out h: true
+    batch norm
+    shift filler (constant, 0.001)
+
+deconv3
+    output 64, kernel 7, pad 3
+    batch norm
+
+upsample3
+    scale 2
+
+deconv2
+    output 64, kernel 7, pad 3
+    batch norm
+
+upsample 2
+    scale 2
+
+deconv1
+    output 64, kernel 7, pad 3
+    batch norm
+
+upsample1
+    scale 2
+
+convclassifier
+    output 11, kernel 1
+
+softmax
