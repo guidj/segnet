@@ -82,7 +82,7 @@ def train():
             print('No checkpoint file found. Initializing...')
             global_step = 0
             sess.run(init)
-            initializer.initialize(autoencoder.get_encoder_parameters(), sess)
+            # initializer.initialize(autoencoder.get_encoder_parameters(), sess)
         else:
             global_step = len(ckpt.all_model_checkpoint_paths) * FLAGS.steps
             ckpt_path = ckpt.model_checkpoint_path
