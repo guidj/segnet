@@ -126,11 +126,15 @@ class SegNetAutoencoder(object):
         self.n = n
         self.max_images = max_images
 
-    def conv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [3, 3], channels_shape, 1, name)))
+    def conv(self, x, channels_shape, name, filter_shape=None):
+        if filter_shape is None:
+            filter_shape = [3, 3]
+        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, filter_shape, channels_shape, 1, name)))
 
-    def deconv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.deconv(x, [3, 3], channels_shape, 1, name)))
+    def deconv(self, x, channels_shape, name, filter_shape=None):
+        if filter_shape is None:
+            filter_shape = [3, 3]
+        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.deconv(x, filter_shape, channels_shape, 1, name)))
 
     def pool(self, x, size=2, stride=2):
         return cnn.max_pool(x, size, stride)
@@ -243,10 +247,11 @@ class SegNetBasic(object):
         self.max_images = max_images
 
     def conv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [7, 7], channels_shape, 1, name, 'SAME')))
+        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [7, 7], channels_shape, 1, name, 'VALID')))
 
     def deconv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.deconv(x, [7, 7], channels_shape, 1, name, 'SAME')))
+        # TODO: segnet: upsampling, conv, batch (NO RELU)
+        return tf.contrib.layers.batch_norm(cnn.deconv(x, [7, 7], channels_shape, 1, name, 'VALID'))
 
     def pool(self, x, size=2, stride=2):
         return cnn.max_pool(x, size, stride)
@@ -291,25 +296,25 @@ class SegNetBasic(object):
     def decode(self, code):
         paddings = [[0, 0], [3, 3], [3, 3], [0, 0]]
         with tf.variable_scope('unpool4'):
-            deconv4 = self.deconv(self.pad(code, paddings), [64, 64], 'deconv4_1')
-            unpool4 = tf.contrib.layers.batch_norm(self.unpool(deconv4))
+            unpool4 = self.unpool(code)
+            deconv4 = self.deconv(self.pad(unpool4, paddings), [64, 64], 'deconv4_1')
 
         with tf.variable_scope('unpool3'):
-            deconv3 = self.deconv(self.pad(unpool4, paddings), [64, 64], 'deconv3_1')
-            unpool3 = tf.contrib.layers.batch_norm(self.unpool(deconv3))
+            unpool3 = self.unpool(deconv4)
+            deconv3 = self.deconv(self.pad(unpool3, paddings), [64, 64], 'deconv3_1')
 
         with tf.variable_scope('unpool2'):
-            deconv2 = self.deconv(self.pad(unpool3, paddings), [64, 64], 'deconv2_1')
-            unpool2 = tf.contrib.layers.batch_norm(self.unpool(deconv2))
+            unpool2 = self.unpool(deconv3)
+            deconv2 = self.deconv(self.pad(unpool2, paddings), [64, 64], 'deconv2_1')
 
         with tf.variable_scope('unpool1'):
-            deconv1 = self.deconv(self.pad(unpool2, paddings), [self.n, 64], 'deconv1_1')
-            unpool1 = tf.contrib.layers.batch_norm(self.unpool(deconv1))
+            unpool1 = self.unpool(deconv2)
+            deconv1 = self.deconv(self.pad(unpool1, paddings), [self.n, 64], 'deconv1_1')
 
         rgb_output = classifier.rgb(unpool1)
         tf.image_summary('output', rgb_output, max_images=self.max_images)
 
-        return unpool1
+        return deconv1
 
     def prepare_encoder_parameters(self):
         param_format = 'conv%d_%d_%s'
