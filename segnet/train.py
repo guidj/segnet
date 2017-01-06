@@ -16,8 +16,8 @@ tf.app.flags.DEFINE_string('train_labels', train_labels_file, 'Train labels data
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 tf.app.flags.DEFINE_string('model', 'SegNetAutoencoder', 'Model to run')
 
-tf.app.flags.DEFINE_integer('batch', 3, 'Batch size')
-tf.app.flags.DEFINE_integer('steps', 50, 'Number of training iterations')
+tf.app.flags.DEFINE_integer('batch', 5, 'Batch size')
+tf.app.flags.DEFINE_integer('steps', 10000, 'Number of training iterations')
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -30,10 +30,12 @@ MODELS = {
 
 
 def accuracy(logits, labels):
-    print '[accuracy][%s]' % logits.get_shape().as_list()
+
+    print '[accuracy][logits: %s, lables: %s]' % (logits.get_shape(), labels.get_shape())
+
+    _shape = logits.get_shape().as_list()
     equal_pixels = tf.reduce_sum(tf.to_float(tf.equal(logits, labels)))
-    # total_pixels = FLAGS.batch * 224 * 224 * 3
-    total_pixels = FLAGS.batch * 360 * 480 * 3
+    total_pixels = FLAGS.batch * _shape[1] * _shape[2] * 3
     return equal_pixels / total_pixels
 
 
@@ -53,6 +55,8 @@ def train():
         exit(1)
 
     one_hot_labels = classifier.one_hot(labels)
+
+    print '[train][labels][shape: %s]' % labels.get_shape().as_list()
 
     print '[train][values][one_hot_labels: %s, images: %s, labels: %s]' % (
         one_hot_labels.get_shape().as_list(), images.get_shape().as_list(), labels.get_shape().as_list())
@@ -97,7 +101,7 @@ def train():
 
         # for step in tqdm(range(FLAGS.steps + 1)):
         for step in range(FLAGS.steps + 1):
-            print '[train][step][%d]' % step
+            # print '[train][step][%d]' % step
 
             try:
                 if coord.should_stop() is False:

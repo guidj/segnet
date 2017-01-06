@@ -28,10 +28,14 @@ def rgb(logits):
     _rgb_shape = rgb_matrix.get_shape().as_list()
     _log_shape = logits.get_shape().as_list()
 
-    print '[rgb][param][logits/shape: %s]' % logits.get_shape().as_list()
-    print '[rgb][argmax][%s]' % argmax.get_shape().as_list()
-    print '[rgb][onehotmatrix][%s]' % one_hot_matrix.get_shape().as_list()
-    print '[rgb][rgb_matrix][%s]' % rgb_matrix.get_shape().as_list()
+    rgb_tensor = tf.reshape(rgb_matrix, [-1, _log_shape[1], _log_shape[2], _rgb_shape[1]])
+    _rgb = tf.cast(rgb_tensor, tf.float32)
 
-    rgb_tensor = tf.reshape(rgb_matrix, [-1, _log_shape[0], _log_shape[1], _rgb_shape[1]])
-    return tf.cast(rgb_tensor, tf.float32)
+    print '[rgb][rgb][shape: %s]' % _rgb.get_shape()
+    print '[rgb][softmax][shape: %s]' % softmax.get_shape()
+    print '[rgb][param][logits/shape: %s]' % _log_shape
+    print '[rgb][argmax][shape: %s]' % argmax.get_shape().as_list()
+    print '[rgb][onehotmatrix][shape: %s]' % one_hot_matrix.get_shape().as_list()
+    print '[rgb][rgb_matrix][shape: %s]' % _rgb_shape
+
+    return _rgb

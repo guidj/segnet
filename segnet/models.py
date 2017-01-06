@@ -246,12 +246,16 @@ class SegNetBasic(object):
         self.n = n
         self.max_images = max_images
 
-    def conv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [7, 7], channels_shape, 1, name, 'SAME')))
+    def conv(self, x, channels_shape, name, kernel_size=None, stride=1):
+        if kernel_size is None:
+            kernel_size = [7, 7]
+        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, kernel_size, channels_shape, stride, name, 'SAME')))
 
-    def deconv(self, x, channels_shape, name):
-        # TODO: segnet: upsampling, conv, batch (NO RELU)
-        return tf.contrib.layers.batch_norm(cnn.deconv(x, [7, 7], channels_shape, 1, name, 'SAME'))
+    def deconv(self, x, channels_shape, name, kernel_size=None, stride=1):
+        # segnet-basic: upsampling, conv, batch (NO RELU)
+        if kernel_size is None:
+            kernel_size = [7, 7]
+        return tf.contrib.layers.batch_norm(cnn.deconv(x, kernel_size, channels_shape, stride, name, 'SAME'))
 
     def pool(self, x, size=2, stride=2):
         return cnn.max_pool(x, size, stride)
@@ -269,6 +273,7 @@ class SegNetBasic(object):
 
         print '[models][unpool][in/shape: %s, dim: %d, out: %s, outsize: %s]' % (
             sh, dim, out.get_shape().as_list(), out_size)
+
         return tf.reshape(out, out_size)
 
     def remove_bottom_row(self, bottom):
@@ -317,12 +322,21 @@ class SegNetBasic(object):
 
         with tf.variable_scope('unpool1'):
             unpool1 = self.unpool(deconv2)
-            deconv1 = self.deconv(self.pad(unpool1, paddings), [self.n, 64], 'deconv1_1')
+            deconv1 = self.deconv(self.pad(unpool1, paddings), [64, 64], 'deconv1_1')
 
-        rgb_output = classifier.rgb(unpool1)
+        rgb_output = classifier.rgb(deconv1)
         tf.image_summary('output', rgb_output, max_images=self.max_images)
 
-        return deconv1
+        # [batch, h, w, classes]
+        conv_classification = tf.nn.relu(cnn.deconv(deconv1, [1, 1], [self.n, 64], 1, 'deconv1_2', 'SAME'))
+
+        return conv_classification
+
+        # print '[segnet-basic][decode][convclass/shape: %s]' % conv_classification.get_shape()
+
+        # softmax = tf.nn.softmax(conv_classification)
+
+        # return softmax
 
     def prepare_encoder_parameters(self):
         param_format = 'conv%d_%d_%s'
