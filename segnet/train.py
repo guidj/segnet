@@ -16,7 +16,7 @@ tf.app.flags.DEFINE_string('train_labels', train_labels_file, 'Train labels data
 tf.app.flags.DEFINE_string('train_logs', './logs/train', 'Log directory')
 tf.app.flags.DEFINE_string('model', 'SegNetAutoencoder', 'Model to run')
 
-tf.app.flags.DEFINE_integer('batch', 1, 'Batch size')
+tf.app.flags.DEFINE_integer('batch', 3, 'Batch size')
 tf.app.flags.DEFINE_integer('steps', 50, 'Number of training iterations')
 
 

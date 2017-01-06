@@ -247,11 +247,11 @@ class SegNetBasic(object):
         self.max_images = max_images
 
     def conv(self, x, channels_shape, name):
-        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [7, 7], channels_shape, 1, name, 'VALID')))
+        return tf.nn.relu(tf.contrib.layers.batch_norm(cnn.conv(x, [7, 7], channels_shape, 1, name, 'SAME')))
 
     def deconv(self, x, channels_shape, name):
         # TODO: segnet: upsampling, conv, batch (NO RELU)
-        return tf.contrib.layers.batch_norm(cnn.deconv(x, [7, 7], channels_shape, 1, name, 'VALID'))
+        return tf.contrib.layers.batch_norm(cnn.deconv(x, [7, 7], channels_shape, 1, name, 'SAME'))
 
     def pool(self, x, size=2, stride=2):
         return cnn.max_pool(x, size, stride)
@@ -271,8 +271,15 @@ class SegNetBasic(object):
             sh, dim, out.get_shape().as_list(), out_size)
         return tf.reshape(out, out_size)
 
+    def remove_bottom_row(self, bottom):
+        shape = bottom.get_shape()
+        print("THIS IS THE MFUCKING SHAPE BITCH!@!@:")
+        print(shape)
+        out = tf.slice(bottom, [0, 0, 0, 0], [int(shape[0]), int(shape[1] - 1), int(shape[2]), int(shape[3])])
+        return out
+
     def encode(self, images):
-        paddings = [[0, 0], [3, 3], [3, 3], [0, 0]]
+        paddings = [[0, 0], [0, 0], [0, 0], [0, 0]]
         tf.image_summary('input', images, max_images=self.max_images)
 
         with tf.variable_scope('pool1'):
@@ -294,9 +301,10 @@ class SegNetBasic(object):
         return pool4
 
     def decode(self, code):
-        paddings = [[0, 0], [3, 3], [3, 3], [0, 0]]
+        paddings = [[0, 0], [0, 0], [0, 0], [0, 0]]
         with tf.variable_scope('unpool4'):
             unpool4 = self.unpool(code)
+            unpool4 = self.remove_bottom_row(unpool4)
             deconv4 = self.deconv(self.pad(unpool4, paddings), [64, 64], 'deconv4_1')
 
         with tf.variable_scope('unpool3'):
